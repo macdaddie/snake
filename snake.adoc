@@ -11,7 +11,9 @@
 :data-uri:
 // enables the representation of mathematical formulae using STEM
 :stem:
-// you can use ‘left’ or ‘right’ instead of ’true’ if you want the toc off to the side
+// enables plantuml diagrams
+:plantuml:
+// you can use 'left' or 'right' instead of 'true' if you want the toc off to the side
 :toc: right 
 :toclevels: 3
 :toc-title: Table of Contents
@@ -40,54 +42,120 @@ endif::[]
 
 == Introduction
 
-The `snake_func.sh` script is designed to rename files in a directory by converting their filenames to a "snake_case" format. This involves replacing spaces and special characters with underscores, ensuring filenames are consistent and easy to handle in various systems.
+The `snake_func.sh` script is designed to rename files and directories by converting their names to a "snake_case" format. This involves replacing spaces and special characters with underscores, ensuring filenames are consistent and easy to handle in various systems.
 
 == Usage
 
 *Command Syntax*::
-`snake <directory_or_file_path>`
+`snake [-r|--recursive] [-p|--period] <path>`
 
-*Parameters*::
-* `directory_or_file_path`: The path to a directory or file to be processed. If a directory is provided, all files within it will be processed.
+*Options*::
+* `-h, --help`: Display help information
+* `-r, --recursive`: Process directories recursively
+* `-p, --period`: Preserve periods in names (don't replace with underscores)
+
+*Arguments*::
+* `<path>`: The path to a file or directory to be renamed
 
 *Examples*::
-* Rename all files in a directory to snake_case:
+* Rename a single file to snake_case (default, periods become underscores):
+  `snake this.is/my.file.txt` → `this_is_my_file.txt`
+* Rename with periods preserved:
+  `snake -p this.is/my.file.txt` → `this.is.my.file.txt`
+* Rename files in a directory (non-recursive, default):
   `snake /path/to/directory`
-* Rename a single file to snake_case:
-  `snake /path/to/file.txt`
+* Rename files in a directory (recursive):
+  `snake -r /path/to/directory`
+
+=== Period Handling
+
+By default, periods are replaced with underscores in both files and directories (except for the period separating the filename from its extension).
+
+*Default (without -p)*::
+  - Multiple consecutive periods are collapsed to a single underscore
+  - `subject.status.date/` → `subject_status_date/`
+  - `this...is.my.file.txt` → `this_is_my_file.txt`
+
+*With -p/--period*::
+  - Periods are preserved as separators between words
+  - Multiple consecutive periods are collapsed to a single period
+  - `subject.status.date/` → `subject.status.date/`
+  - `this...is.my.file.txt` → `this.is.my.file.txt`
+
+=== Recursive Behavior
+
+By default, the `snake` function processes only the specified file or the immediate contents of a directory. To process directories recursively (including all subdirectories), use the `-r` or `--recursive` flag.
+
+Without `-r`, if a directory is provided, only files and directories directly in that path are processed. With `-r`, the function iterates through all subdirectories and renames files at every level.
 
 == Design and Flow
 
 The script follows a structured approach to ensure filenames are converted to snake_case:
 
-* *Directory Check*:
-  - If the provided path is a directory, the script iterates over each file and calls itself recursively.
+* *snake_transform Function*:
+  - A reusable function that applies all transformations to convert text to snake_case.
+  - The function accepts an optional second parameter to control period handling.
+  - **Transformation order is critical** - each step depends on the previous one to produce correct results:
+    1. **Convert to lowercase** - ensures consistent casing before any other transformations
+    2. **Replace spaces with underscores** - converts word separators first, before collapsing
+    3. **Replace periods with underscores** - when NOT preserving periods (flag=0)
+    4. **Replace other special characters with underscores** - commas, exclamation marks, pipes, middle dots
+    5. **Remove apostrophes** - removes contractions and quotes
+    6. **Collapse multiple underscores** - reduces `____` to `_` (this must happen BEFORE removing trailing chars)
+    7. **When preserving periods (flag=1)**: the function replaces periods with underscores first, collapses underscores, then converts back to periods
+    8. **Remove trailing non-alphanumeric characters** - final cleanup of dangling separators
+  
+  \n\n*Important note about order*:
+  - Underscore/hyphen collapsing must happen BEFORE trailing character removal, otherwise `____` would collapse to `_` but then the trailing removal would strip it
+  - Period replacement must happen BEFORE underscore collapsing when `replace_periods=0`, or you'd have `____` instead of `___` after collapsing
+  - When preserving periods with `-p`, the approach is: replace periods with underscores → collapse underscores → convert underscores back to periods
 
 * *Filename Processing*:
   - Extracts the directory path, filename, and extension.
-  - Trims leading and trailing spaces from the filename.
-  - Replaces spaces, periods, commas, pipes, and other special characters with underscores.
-  - Removes any double underscores or hyphens.
-  - Constructs the new filename and moves the file to the new name.
+  - For the extension: always replaces periods (the extension itself can't contain meaningful periods).
+  - For the base name:
+    - Without `-p`: replaces periods with underscores
+    - With `-p`: preserves periods in the base name (using placeholder approach)
+  - Reconstructs the filename with the new base and extension.
 
-* *Loop Logic*:
-  - The script processes each file in the directory recursively, ensuring all filenames are converted.
+* *Directory Processing*:
+  - Without `-p`: periods are replaced with underscores
+  - With `-p`: periods are preserved
+  - If `-r` flag is set, iterates over all entries recursively.
 
-[plantuml]
+* *Period Flag Behavior*:
+  - The `-p` flag applies to both files and directories uniformly.
+  - The period between filename and extension is always preserved (not replaced).
+
+[plantuml%width=800,height=600]
 ----
 @startuml
 start
-:Check if path is a directory;
-if (Is directory?) then (yes)
-  :Iterate over files;
-  :Call snake function recursively;
+:Parse options (-h, -r, -p);
+if (Is -h/--help?) then (yes)
+  :Display help message;
+  stop
 else (no)
-  :Extract directory and filename;
-  :Trim spaces from filename;
-  :Replace special characters with underscores;
-  :Remove double underscores and hyphens;
-  :Construct new filename;
-  :Rename file;
+endif
+:Extract directory and filename;
+if (Is file?) then (yes)
+  :Extract base name and extension;
+  :Apply snake_transform to extension (always replace periods);
+  if (Is -p flag?) then (yes)
+    :Apply snake_transform to base (preserve periods);
+  else (no)
+    :Apply snake_transform to base (replace periods);
+  endif
+else (no)
+  :Apply snake_transform to name;
+endif
+:Construct new path;
+if (Path differs?) then (yes)
+  :Rename file/directory;
+endif
+if (Is directory? and -r flag?) then (yes)
+  :Iterate over entries recursively;
+  :Call snake function on each entry;
 endif
 stop
 @enduml

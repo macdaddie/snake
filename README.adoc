@@ -1,0 +1,49 @@
+= Snake
+
+A bash function to rename files and directories to snake_case format.
+
+== Description
+
+The `snake` function recursively renames files and directories to use a consistent snake_case naming convention. It handles spaces, special characters, and mixed case naming to produce clean, standardized filenames.
+
+For detailed information about the implementation and usage, see xref:snake.adoc[the snake documentaion].
+
+== Installation
+
+### Bash
+
+Add the following line to your `~/.bashrc`:
+
+[source,bash]
+----
+source "$PWD/snake_func.sh"
+----
+
+### Zsh
+
+Add the following line to your `~/.zshrc`:
+
+[source,bash]
+----
+source "$PWD/snake_func.sh"
+----
+
+Alternatively, you can use this one-liner to automatically detect your shell and update the appropriate config file:
+
+[source,bash]
+----
+rc=$([[ $SHELL == */zsh ]] && echo "${ZDOTDIR:-$HOME}/.zshrc" || echo "$HOME/.bashrc"); line="source \"$PWD/snake_func.sh\""; grep -Fqx "$line" "$rc" 2>/dev/null || printf '\n%s\n' "$line" >> "$rc"
+----
+
+== Usage
+
+[source,bash]
+----
+snake <directory_or_file_path>
+----
+
+See xref:snake.adoc[snake.adoc] for detailed usage instructions and examples.
+
+== License
+
+This project is licensed under the MIT License - see the xref:LICENSE.adoc[LICENSE.adoc] file for details.
