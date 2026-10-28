@@ -39,8 +39,10 @@ rc=$([[ $SHELL == */zsh ]] && echo "${ZDOTDIR:-$HOME}/.zshrc" || echo "$HOME/.ba
 
 [source,bash]
 ----
-snake <directory_or_file_path>
+snake [-r|--recursive] [-p|--period] [-o|--overwrite] [directory_or_file_path]
 ----
+
+If the path is omitted, or is `.` or `./`, the current directory's entries are processed. Add `-r` to recurse into subdirectories.
 
 See xref:snake.adoc[snake.adoc] for detailed usage instructions and examples.
 
