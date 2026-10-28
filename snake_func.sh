@@ -67,6 +67,58 @@ snake_transform() {
   echo "$result"
 }
 
+# Check if target filename already exists and generate unique name
+# Parameters:
+#   $1: base name (path including directory)
+#   $2: desired filename
+#   $3: preserve_periods (1=yes, 0=no)
+# Returns: unique filename via echo
+generate_unique_name() {
+  local dirpath="$1"
+  local desired_name="$2"
+  local preserve_periods="$3"
+  local base_name ext counter
+  local target_path="${dirpath}/${desired_name}"
+  
+  # If target doesn't exist, return the desired name
+  if [ ! -e "$target_path" ]; then
+    echo "$desired_name"
+    return
+  fi
+  
+  # Extract base name and extension
+  base_name="${desired_name%.*}"
+  ext="${desired_name##*.}"
+  
+  # If no extension (directory or file without extension)
+  if [ "$base_name" = "$desired_name" ]; then
+    ext=""
+  else
+    # Check if it's really an extension or just a period in the name
+    # If the filename has only one dot and it's at the end, treat as no extension
+    local dot_count
+    dot_count="$(echo "$desired_name" | tr -cd '.' | wc -c)"
+    if [ "$dot_count" -eq 1 ] && [ "${desired_name: -1}" = "." ]; then
+      ext=""
+    fi
+  fi
+  
+  counter=1
+  while [ -e "$target_path" ]; do
+    if [ -n "$ext" ] && [ "$ext" != "$desired_name" ]; then
+      # File with extension
+      desired_name="${base_name}_${counter}.${ext}"
+    else
+      # Directory or file without extension
+      desired_name="${desired_name}_${counter}"
+    fi
+    target_path="${dirpath}/${desired_name}"
+    counter=$((counter + 1))
+  done
+  
+  echo "$desired_name"
+}
+
 snake() {
   local recursive=false
   local preserve_periods=false
@@ -139,10 +191,30 @@ snake() {
     new_name="${new_base}"
   fi
 
+  # If the transformed name is the same as original, skip further processing
+  local original_name="$(basename "$path")"
+  if [ "$new_name" = "$original_name" ]; then
+    return 0
+  fi
+
+  # Check if target already exists and add counter suffix if needed
+  local final_name
+  final_name="$(generate_unique_name "$dirpath" "$new_name" "$preserve_periods")"
+  
+  # If the final name differs from new_name, update it
+  if [ "$final_name" != "$new_name" ]; then
+    new_name="$final_name"
+  fi
+
   local new_path="${dirpath}/${new_name}"
 
-  # Only rename if the new name differs
-  if [ "$path" != "$new_path" ]; then
+  # Resolve to absolute paths for comparison
+  local abs_path abs_new_path
+  abs_path="$(cd "$(dirname "$path")" 2>/dev/null && pwd)/$(basename "$path")"
+  abs_new_path="$(cd "$(dirname "$new_path")" 2>/dev/null && pwd)/$(basename "$new_path")"
+
+  # Only rename if the new name differs from the original path
+  if [ "$abs_path" != "$abs_new_path" ]; then
     mv "$path" "$new_path"
     echo "Renamed '$path' to '$new_path'"
     path="$new_path"
