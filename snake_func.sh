@@ -13,6 +13,12 @@ Options:
 Arguments:
   path               File or directory path to rename
 
+
+Behavior:
+  When the target filename already exists, appends _N suffix where N is an
+  incrementing number (e.g., file_1.txt, file_2.txt) to prevent overwriting.
+  Skips renaming if the transformed name matches the original filename.
+
 Examples:
   snake myfile.txt                    # Rename a file
   snake my directory/                 # Rename files in a directory (non-recursive)

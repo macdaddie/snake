@@ -57,6 +57,12 @@ The `snake_func.sh` script is designed to rename files and directories by conver
 *Arguments*::
 * `<path>`: The path to a file or directory to be renamed
 
+*Behavior*::
+* When the target filename already exists, appends `_N` suffix where N is an incrementing number
+  (e.g., `file_1.txt`, `file_2.txt`, etc.) to prevent overwriting
+* Skips renaming if the transformed name matches the original filename exactly
+* When preserving periods (`-p`), the counter is still appended as an underscore-separated number
+
 *Examples*::
 * Rename a single file to snake_case (default, periods become underscores):
   `snake this.is/my.file.txt` → `this_is_my_file.txt`
