@@ -6,7 +6,7 @@
 // Required for the kbd[] macro to work
 :experimental:
 // Image directory
-// :imagesdir: <insert relative path to image directory here>
+:imagesdir: ./images/
 // force the base64 embedding of images
 :data-uri:
 // enables the representation of mathematical formulae using STEM
@@ -38,207 +38,308 @@ endif::[]
 // :stylesdir: /Volumes/Charles10/charles/IT/languages/asciidoc/css_templates/css/
 
 // Main Document
-= snake_func.sh Manual
+= snake Manual
 
-== Introduction
+== Overview
 
-The `snake_func.sh` script is designed to rename files and directories by converting their names to a "snake_case" format. This involves replacing spaces and special characters with underscores, ensuring filenames are consistent and easy to handle in various systems.
+The `snake` function, defined in `snake_func.sh`, renames files and directories to `snake_case`. It normalizes case, spaces, punctuation, periods, and brackets to produce consistent names across filesystems and tools.
+
+The function can process a single path, the immediate entries of the current directory, or a directory tree. When a target name already exists, it can either generate a unique name with an `_N` suffix, replace an existing target file, or merge into an existing target directory.
+
+== Requirements and Compatibility
+
+* Bash 3.2 or later, or Zsh.
+* Standard Unix utilities: `dirname`, `basename`, `sed`, `tr`, and `mv`.
+* Source `snake_func.sh` from your shell configuration. See link:README.adoc[the README] for installation examples.
+* On case-insensitive filesystems, such as the macOS default, case-only renames are recognized as the same file and do not receive an `_N` suffix.
 
 == Usage
 
-*Command Syntax*::
-`snake [-r|--recursive] [-p|--period] [-o|--overwrite] [path]`
+=== Syntax
 
-*Options*::
-* `-h, --help`: Display help information
-* `-r, --recursive`: Process directories recursively
-* `-p, --period`: Preserve periods in names (don't replace with underscores)
-* `-o, --overwrite`: Overwrite an existing target instead of adding an `_N` suffix
+[source,bash]
+----
+snake [OPTIONS] [path]
+----
 
-*Arguments*::
-* `[path]`: The path to a file or directory to be renamed. Defaults to the current directory
+If `path` is omitted, or is `.` or `./`, the function processes entries in the current directory.
 
-*Behavior*::
-* If `path` is omitted, or is `.` or `./`, the entries in the current directory are processed
-* Without `-r`, only immediate entries in the current directory are handled; with `-r`, subdirectories are processed too
-* When the target filename already exists, appends `_N` suffix where N is an incrementing number
-  (e.g., `file_1.txt`, `file_2.txt`, etc.) to prevent overwriting
-* With `-o`, an existing target file is replaced by the renamed source
-* With `-o`, an existing target directory uses normal `mv` semantics, so the source is moved into the target directory
-* Flags are propagated into recursive calls, so `-r -p -o` applies at every level
-* Skips renaming if the transformed name matches the original filename exactly
-* When preserving periods (`-p`), the counter is still appended as an underscore-separated number
-* Directories and files without a real extension keep the suffix at the end of the name; files with an extension get the suffix before the extension
-* On case-insensitive filesystems, a case-only rename is not treated as a collision
+=== Options
 
-*Examples*::
-* Rename a single file to snake_case (default, periods become underscores):
-  `snake this.is/my.file.txt` → `this_is_my_file.txt`
-* Rename with periods preserved:
-  `snake -p this.is/my.file.txt` → `this.is.my.file.txt`
-* Process the current directory (non-recursive):
-  `snake .`
-* Process the current directory and all subdirectories:
-  `snake -r`
-* Rename a directory and its contents recursively:
-  `snake -r /path/to/directory`
-* Overwrite an existing target file instead of adding a suffix:
-  `snake -o /path/to/My File.txt`
-* Combine recursion, period preservation, and overwriting:
-  `snake -r -p -o /path/to/directory`
-* Replace brackets with underscores:
-  `snake "File [draft] (v2).txt"` → `file_draft_v2.txt`
+[cols="1,1,3",options="header"]
+|===
+|Option |Long form |Description
 
-=== Period Handling
+|`-h`
+|`--help`
+|Show help and exit.
 
-By default, periods are replaced with underscores in both files and directories (except for the period separating the filename from its extension).
+|`-r`
+|`--recursive`
+|Process directories recursively.
 
-*Default (without -p)*::
-  - Multiple consecutive periods are collapsed to a single underscore
-  - `subject.status.date/` → `subject_status_date/`
-  - `this...is.my.file.txt` → `this_is_my_file.txt`
+|`-p`
+|`--period`
+|Preserve periods instead of replacing them with underscores.
 
-*With -p/--period*::
-  - Periods are preserved as separators between words
-  - Spaces, hyphens, and other separators still become underscores
-  - Multiple consecutive periods are collapsed to a single period
-  - `subject.status.date/` → `subject.status.date/`
-  - `this...is.my.file.txt` → `this.is.my.file.txt`
-  - `My File.txt` → `my_file.txt`
+|`-o`
+|`--overwrite`
+|Overwrite an existing target instead of adding an `_N` suffix.
+|===
+
+=== Examples
+
+[cols="1,2,2",options="header"]
+|===
+|Task |Command |Result
+
+|Rename a file
+|`snake "My File.txt"`
+|`my_file.txt`
+
+|Preserve periods in a name
+|`snake -p "my.file.name.txt"`
+|`my.file.name.txt`
+
+|Process the current directory
+|`snake .`
+|Immediate entries are renamed.
+
+|Process the current directory recursively
+|`snake -r`
+|Entries at every level are renamed.
+
+|Rename a directory and its contents
+|`snake -r "My Directory"`
+|The directory and its contents are renamed.
+
+|Overwrite an existing target
+|`snake -o "My File.txt"`
+|An existing `my_file.txt` is replaced.
+
+|Replace brackets with underscores
+|`snake "File [draft] (v2).txt"`
+|`file_draft_v2.txt`
+
+|Combine recursion, period preservation, and overwriting
+|`snake -r -p -o "My.Directory"`
+|The directory tree is renamed, periods are preserved, and collisions are overwritten.
+|===
+
+=== Current Directory Mode
+
+When `path` is omitted, is `.`, or is `./`, the function processes the entries in the current directory instead of attempting to rename `.` itself.
+
+Without `-r`, only immediate entries are processed. With `-r`, subdirectories are processed as well. An empty directory is a successful no-op.
 
 === Recursive Behavior
 
-When the path is omitted, or is `.` or `./`, the `snake` function processes the immediate entries of the current directory. To process subdirectories as well, use the `-r` or `--recursive` flag.
+With `-r`, the function renames a directory and then processes its contents. Without `-r`, a named directory is renamed but its contents are left untouched.
 
-Without `-r`, only the immediate entries are handled in current-directory mode, and a named directory is renamed without processing its contents. With `-r`, the function iterates through all subdirectories and renames entries at every level.
+Active flags are propagated into recursive calls, so `-r -p -o` applies at every level.
+
+=== Collisions and Overwrite Behavior
+
+By default, `snake` does not silently replace an existing target. It appends an incrementing `_N` suffix instead.
+
+[cols="2,2,2",options="header"]
+|===
+|Situation |Default |With `-o`
+
+|Target file exists
+|The suffix is inserted before the extension, for example `my_file_1.txt`.
+|The existing target file is replaced.
+
+|Target extensionless file exists
+|The suffix is appended, for example `my_file_1`.
+|The existing target file is replaced.
+
+|Target directory exists
+|The suffix is appended, for example `my_dir_1`.
+|The source is moved into the existing target directory under its transformed name, for example `my_dir/my_dir`.
+
+|Case-only rename on a case-insensitive filesystem
+|The name is renamed without an `_N` suffix.
+|The name is renamed without an `_N` suffix.
+|===
+
+Directories and files without a real extension keep the suffix at the end of the name. Files with an extension receive the suffix before the extension.
+
+[CAUTION]
+====
+With `-o`, an existing target directory is not removed or replaced. The source is moved inside it under its transformed name. For example, `snake -o "My Dir"` when `my_dir/` already exists produces `my_dir/my_dir/`. If a directory with that transformed name already exists, the source is nested deeper using the same name, so the moved entry always keeps a snake_case name.
+====
+
+=== Period and Separator Handling
+
+By default, periods are replaced with underscores, except for the period separating the filename from a real extension. Spaces, hyphens, punctuation, and brackets are treated as separators and become underscores.
+
+Use `-p` or `--period` to preserve periods. Consecutive periods collapse to a single period, while spaces, hyphens, and brackets still become underscores.
+
+[cols="2,2,2",options="header"]
+|===
+|Input |Default |With `-p`
+
+|`subject.status.date`
+|`subject_status_date`
+|`subject.status.date`
+
+|`this...is.my.file.txt`
+|`this_is_my_file.txt`
+|`this.is.my.file.txt`
+
+|`My File.txt`
+|`my_file.txt`
+|`my_file.txt`
+
+|`my-file.txt`
+|`my_file.txt`
+|`my_file.txt`
+
+|`File [draft] (v2).txt`
+|`file_draft_v2.txt`
+|`file_draft_v2.txt`
+|===
+
+Extensions are always lowercased and normalized. Only a real, non-empty extension is split from the base name; files without an extension and names ending in a period are treated as a single base name.
+
+== Exit Status
+
+[cols="1,3",options="header"]
+|===
+|Status |Meaning
+
+|`0`
+|Success, help displayed, or no rename needed.
+
+|`1`
+|Invalid option or path not found.
+|===
 
 == Design and Flow
 
-The script follows a structured approach to ensure filenames are converted to snake_case:
+NOTE: This section describes implementation details. Users only need the Usage and Exit Status sections.
 
-* *snake_transform Function*:
-  - A reusable function that applies all transformations to convert text to snake_case.
-  - The function accepts an optional second parameter to control period handling.
-  - **Transformation order is critical** - each step depends on the previous one to produce correct results:
-    1. **Convert to lowercase** - ensures consistent casing before any other transformations
-    2. **Replace spaces with underscores** - converts word separators first, before collapsing
-    3. **Handle periods** - replace them with underscores by default, or hide them behind a temporary marker when preserving periods (flag=1)
-    4. **Replace other special characters with underscores** - commas, exclamation marks, pipes, middle dots, and brackets (`[]`, `()`, `{}`, `<>`)
-    5. **Replace hyphens with underscores** - hyphens are word separators in snake_case
-    6. **Remove apostrophes** - removes contractions and quotes
-    7. **Collapse multiple underscores** - reduces `____` to `_`
-    8. **Restore preserved periods** - when flag=1, convert the marker back to a period and collapse repeated periods
-    9. **Remove trailing non-alphanumeric characters** - final cleanup of dangling separators
+=== Transform Pipeline
+
+All character transformations are performed by the `snake_transform` function. The order is critical:
+
+. **Convert to lowercase.** This makes the remaining comparisons and replacements consistent.
+. **Replace spaces with underscores.**
+. **Handle periods.** Replace them with underscores by default, or hide them behind a marker when `-p` preserves them.
+. **Replace supported punctuation with underscores.** This includes commas, exclamation marks, pipes, and middle dots.
+. **Handle brackets.** Replace square, round, curly, and angle brackets with a temporary marker, then convert the marker to underscores. When periods are preserved, remove bracket markers directly beside period markers first.
+. **Replace hyphens with underscores.**
+. **Remove apostrophes.**
+. **Collapse repeated underscores.**
+. **Restore preserved periods.** When `-p` is active, convert the period marker back to a period and collapse repeated periods.
+. **Remove trailing non-alphanumeric characters.**
 
 [IMPORTANT]
 .Order of operations
 ====
 The order matters because later steps create characters that earlier steps are supposed to normalize.
 
-* **Convert first, collapse later.** Every step that can produce an underscore must run before underscores are collapsed. Spaces, rejected periods, punctuation, brackets, and hyphens all become underscores first. For example, `a-_b` must become `a__b` before collapsing; if the collapse runs first, hyphen conversion leaves the double underscore behind. The same rule applies to any `_-_`, `_._`, or similar mixed-separator cleanup: normalize the separators into their final form before merging adjacent ones.
+* **Convert first, collapse later.** Every step that can produce an underscore must run before underscores are collapsed. Spaces, rejected periods, punctuation, brackets, and hyphens all become underscores first. For example, `a-\_b` must become `a__b` before collapsing; if the collapse runs first, hyphen conversion leaves the double underscore behind. The same rule applies to any `_-\_`, `_._`, or similar mixed-separator cleanup: normalize the separators into their final form before merging adjacent ones.
 * **Hide preserved periods before separator conversion.** With `-p`, periods must be replaced by a marker before underscores are introduced. Otherwise preserved periods would be handled as ordinary separators and could be converted to underscores.
 * **Clean bracket markers beside preserved periods before brackets become underscores.** This prevents a bracket next to a preserved period from leaving a stray underscore on the other side of that period.
 * **Collapse underscores before restoring periods.** The underscore step must complete while period markers are still distinct. Restoring periods first would expose `_._` and `_` runs beside periods to the wrong normalization.
 * **Remove trailing non-alphanumeric characters last.** Trailing cleanup must follow underscore collapsing and period restoration, otherwise it can strip a separator that a later step would have merged or restored.
 ====
 
-* *Filename Processing*:
-  - Extracts the directory path, filename, and extension.
-  - A filename is split only when it has a real, non-empty extension. Files without an extension, and names ending in a period, are treated as a single base name.
-  - For the extension: always replaces periods (the extension itself can't contain meaningful periods).
-  - For the base name:
-    - Without `-p`: replaces periods with underscores
-    - With `-p`: preserves periods in the base name using a temporary marker
-  - Reconstructs the filename with the new base and extension when an extension exists.
+=== Filename Processing
 
-* *Directory Processing*:
-  - Without `-p`: periods are replaced with underscores
-  - With `-p`: periods are preserved
-  - If `-r` flag is set, iterates over all entries recursively.
+* The directory path and filename are extracted first.
+* A filename is split into base and extension only when it has a real, non-empty extension. Files without an extension, and names ending in a period, use the whole name as the base.
+* The extension is always transformed with periods replaced and is lowercased.
+* The base name is transformed with `snake_transform`, using the active period mode.
+* The target name is rebuilt with the transformed base and, when present, the transformed extension.
 
-* *Period Flag Behavior*:
-  - The `-p` flag applies to both files and directories uniformly.
-  - The period between filename and extension is always preserved (not replaced).
+=== Directory and Recursion Processing
+
+* Directory names use the same transform as file base names. Periods are replaced unless `-p` is active.
+* With `-r`, the directory is renamed first and then each entry is processed recursively.
+* Current-directory mode iterates over the entries in the current directory rather than renaming the `.` path.
+* Active flags are forwarded to recursive calls.
 
 === Adding New Transforms
 
-All character transformations happen inside the `snake_transform` function. Each rule is a discrete Bash parameter-expansion substitution:
+All character transformations happen inside the `snake_transform` function. Each rule is a discrete Bash parameter-expansion substitution, which keeps new rules small and easy to read:
 
 [source,bash]
 ----
-result="${result//SEARCH/REPLACE}"
-----
-
-This makes new rules small and easy to read. To treat `@` and `#` as separators, add two rules alongside the existing punctuation replacements:
-
-[source,bash]
-----
+# Separators become underscores
 result="${result//@/_}"
 result="${result//#/_}"
-----
 
-To discard a character instead of replacing it, use an empty replacement:
-
-[source,bash]
-----
+# Characters can be removed with an empty replacement
 result="${result//;/}"
-----
 
-Simple substitutions avoid the escaping and readability problems of regular expressions. The search pattern is a shell glob pattern, not a regex. Escape glob-special characters when they are meant literally, as the existing bracket rules do:
-
-[source,bash]
-----
+# Escape glob-special characters when matching them literally
 result="${result//\[/_}"
 ----
 
-Placement is part of the transform. Any new rule that produces underscores must appear before `tr -s '_'` collapses underscore runs and before preserved periods are restored. Otherwise the new underscores will not merge with adjacent ones, so sequences such as `_-_`, `_._`, or repeated underscores may be normalized in the wrong order. Rules that only delete characters, such as apostrophe removal, can sit with the other cleanup rules, but the general constraint remains: convert separators first, then collapse and restore.
+The search pattern is a shell glob pattern, not a regular expression. Escape glob-special characters when they are meant literally, as the bracket rules do. This avoids the escaping and readability problems of regex-based replacements.
 
-When a new rule must interact with preserved periods under `-p`, remember that periods are held behind a marker at that stage. Extend the marker handling deliberately instead of matching `.` directly.
+Placement is part of the transform:
 
-[plantuml%width=800,height=600]
-----
-@startuml
-start
-:Parse options (-h, -r, -p, -o);
-if (Is -h/--help?) then (yes)
-  :Display help message;
-  stop
-else (no)
-endif
-if (Path omitted, ., or ./?) then (yes)
-  :Iterate over current directory entries;
-  :Call snake function with active flags on each entry;
-  stop
-else (no)
-endif
-:Extract directory and filename;
-if (Is file?) then (yes)
-  :Extract base name and extension;
-  :Apply snake_transform to extension (always replace periods);
-  if (Is -p flag?) then (yes)
-    :Apply snake_transform to base (preserve periods);
-  else (no)
-    :Apply snake_transform to base (replace periods);
-  endif
-else (no)
-  :Apply snake_transform to name;
-endif
-:Construct new path;
-if (Path differs?) then (yes)
-  if (Target exists?) then (yes)
-    if (Is -o flag?) then (yes)
-      :Overwrite target file or merge into target directory;
-    else (no)
-      :Append _N suffix to target name;
-    endif
-  else (no)
-  endif
-  :Rename file/directory;
-endif
-if (Is directory? and -r flag?) then (yes)
-  :Iterate over entries recursively;
-  :Call snake function with active flags on each entry;
-endif
-stop
-@enduml
-----
+. **Rules that produce underscores** must appear before `tr -s '_'` collapses underscore runs and before preserved periods are restored. Otherwise the new underscores will not merge with adjacent ones, and sequences such as `_-_`, `_._`, or repeated underscores may be normalized in the wrong order.
+. **Rules that only delete characters** can sit with the other cleanup rules, but must still run before trailing character removal.
+. **Rules that interact with preserved periods** must account for the period marker. Extend the marker handling deliberately instead of matching `.` directly.
+
+=== Flow Diagram
+
+The diagram below describes the current control flow. It is intended as an implementation aid.
+
+image:snake.png[]
+// [plantuml%width=800,height=600]
+// ----
+// @startuml
+// start
+// :Parse options (-h, -r, -p, -o);
+// if (Is -h/--help?) then (yes)
+//   :Display help message;
+//   stop
+// else (no)
+// endif
+// if (Path omitted, ., or ./?) then (yes)
+//   :Iterate over current directory entries;
+//   :Call snake function with active flags on each entry;
+//   stop
+// else (no)
+// endif
+// :Extract directory and filename;
+// if (Is file?) then (yes)
+//   :Extract base name and extension;
+//   :Apply snake_transform to extension (always replace periods);
+//   if (Is -p flag?) then (yes)
+//     :Apply snake_transform to base (preserve periods);
+//   else (no)
+//     :Apply snake_transform to base (replace periods);
+//   endif
+// else (no)
+//   :Apply snake_transform to name;
+// endif
+// :Construct new path;
+// if (Path differs?) then (yes)
+//   if (Target exists?) then (yes)
+//     if (Is -o flag?) then (yes)
+//       :Overwrite target file or merge into target directory with transformed name;
+//     else (no)
+//       :Append _N suffix to target name;
+//     endif
+//   else (no)
+//   endif
+//   :Rename file/directory;
+// endif
+// if (Is directory? and -r flag?) then (yes)
+//   :Iterate over entries recursively;
+//   :Call snake function with active flags on each entry;
+// endif
+// stop
+// @enduml
+// ----
+
+== License
+
+This project is licensed under the MIT License. See link:LICENSE.adoc[LICENSE.adoc] for details.

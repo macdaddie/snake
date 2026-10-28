@@ -41,7 +41,9 @@ Arguments:
 Behavior:
   When the target filename already exists, appends _N suffix where N is an
   incrementing number (e.g., file_1.txt, file_2.txt) to prevent overwriting.
-  Use -o/--overwrite to replace existing targets instead of adding a suffix.
+  Use -o/--overwrite to replace existing target files instead of adding a
+  suffix. When the target is an existing directory, the source is moved inside
+  it under its transformed snake_case name.
   Skips renaming if the transformed name matches the original filename.
   If path is omitted, or is . or ./, the entries in the current directory are
   processed. Add -r to process subdirectories as well.
@@ -392,6 +394,18 @@ snake() {
   fi
   new_name="$final_name"
   local new_path="${dirpath}/${new_name}"
+  local dest_path="$new_path"
+
+  # When overwriting into an existing directory, a plain mv would place the
+  # source inside under its original name. Descend using the transformed name
+  # instead, so the moved entry always keeps its snake_case name. A case-only
+  # target on a case-insensitive filesystem is the source itself, so do not
+  # descend into it.
+  if [ "$overwrite" = true ]; then
+    while [ -d "$dest_path" ] && ! [ "$dest_path" -ef "$target" ]; do
+      dest_path="${dest_path}/${new_name}"
+    done
+  fi
 
   #############################################################################
   # Rename
@@ -400,18 +414,18 @@ snake() {
   # pointless move. mv -f is used only when overwriting so the default mode
   # keeps its existing, conservative behavior.
   #############################################################################
-  local abs_path abs_new_path
+  local abs_path abs_dest_path
   abs_path="$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")"
-  abs_new_path="$(cd "$(dirname "$new_path")" 2>/dev/null && pwd)/$(basename "$new_path")"
+  abs_dest_path="$(cd "$(dirname "$dest_path")" 2>/dev/null && pwd)/$(basename "$dest_path")"
 
-  if [ "$abs_path" != "$abs_new_path" ]; then
+  if [ "$abs_path" != "$abs_dest_path" ]; then
     if [ "$overwrite" = true ]; then
-      mv -f "$target" "$new_path"
+      mv -f "$target" "$dest_path"
     else
-      mv "$target" "$new_path"
+      mv "$target" "$dest_path"
     fi
-    echo "Renamed '$target' to '$new_path'"
-    target="$new_path"
+    echo "Renamed '$target' to '$dest_path'"
+    target="$dest_path"
   fi
 
   #############################################################################

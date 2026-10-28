@@ -1,51 +1,58 @@
-= Snake
+= snake
 
-A bash function to rename files and directories to snake_case format.
+A Bash and Zsh function for renaming files and directories to `snake_case`.
 
-== Description
-
-The `snake` function recursively renames files and directories to use a consistent snake_case naming convention. It handles spaces, special characters, and mixed case naming to produce clean, standardized filenames.
-
-For detailed information about the implementation and usage, see xref:snake.adoc[the snake documentaion].
+The `snake` function normalizes case, spaces, punctuation, periods, and brackets. It can process a single path, the current directory, or a directory tree, and it can either avoid collisions with `_N` suffixes or overwrite existing targets.
 
 == Installation
 
-### Bash
+The function is defined in `snake_func.sh`. Source that file from your shell configuration.
 
-Add the following line to your `~/.bashrc`:
+=== Bash
 
-[source,bash]
-----
-source "$PWD/snake_func.sh"
-----
-
-### Zsh
-
-Add the following line to your `~/.zshrc`:
+Add the following line to `~/.bashrc`, replacing the path with the location of your checkout:
 
 [source,bash]
 ----
-source "$PWD/snake_func.sh"
+source "/path/to/snake/snake_func.sh"
 ----
 
-Alternatively, you can use this one-liner to automatically detect your shell and update the appropriate config file:
+=== Zsh
+
+Add the following line to `~/.zshrc`, replacing the path with the location of your checkout:
 
 [source,bash]
 ----
-rc=$([[ $SHELL == */zsh ]] && echo "${ZDOTDIR:-$HOME}/.zshrc" || echo "$HOME/.bashrc"); line="source \"$PWD/snake_func.sh\""; grep -Fqx "$line" "$rc" 2>/dev/null || printf '\n%s\n' "$line" >> "$rc"
+source "/path/to/snake/snake_func.sh"
 ----
 
-== Usage
+=== Automatic setup
+
+To detect the shell and add a source line automatically, set `snake_func` to the absolute path of `snake_func.sh`, then run:
 
 [source,bash]
 ----
-snake [-r|--recursive] [-p|--period] [-o|--overwrite] [directory_or_file_path]
+snake_func="$HOME/.local/share/snake/snake_func.sh"
+rc=$([[ $SHELL == */zsh ]] && echo "${ZDOTDIR:-$HOME}/.zshrc" || echo "$HOME/.bashrc")
+line="source \"$snake_func\""
+grep -Fqx "$line" "$rc" 2>/dev/null || printf '\n%s\n' "$line" >> "$rc"
 ----
 
-If the path is omitted, or is `.` or `./`, the current directory's entries are processed. Add `-r` to recurse into subdirectories.
+== Quick start
 
-See xref:snake.adoc[snake.adoc] for detailed usage instructions and examples.
+[source,bash]
+----
+source "/path/to/snake/snake_func.sh"
+
+snake "My File.txt"          # my_file.txt
+snake -r .                   # process the current directory recursively
+snake -o "My File.txt"       # overwrite an existing my_file.txt
+----
+
+== Documentation
+
+See link:snake.adoc[the snake manual] for syntax, options, behavior, examples, and implementation details.
 
 == License
 
-This project is licensed under the MIT License - see the xref:LICENSE.adoc[LICENSE.adoc] file for details.
+This project is licensed under the MIT License. See link:LICENSE.adoc[LICENSE.adoc] for details.
