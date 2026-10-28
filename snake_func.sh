@@ -103,6 +103,8 @@ snake_transform() {
   # Replace the remaining supported punctuation with underscores.
   result="${result//,/_}"
   result="${result//!/_}"
+  result="${result//=/_}"
+  result="${result//\\/_}"
   result="${result//|/_}"
   result="${result//·/_}"
 
@@ -237,30 +239,30 @@ snake() {
   #############################################################################
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -h|--help)
-        echo "$_SNAKE_HELP"
-        return 0
-        ;;
-      -r|--recursive)
-        recursive=true
-        shift
-        ;;
-      -p|--period)
-        preserve_periods=true
-        shift
-        ;;
-      -o|--overwrite)
-        overwrite=true
-        shift
-        ;;
-      -*)
-        echo "Usage: snake [-r|--recursive] [-p|--period] [-o|--overwrite] <path>" >&2
-        return 1
-        ;;
-      *)
-        target="$1"
-        shift
-        ;;
+    -h | --help)
+      echo "$_SNAKE_HELP"
+      return 0
+      ;;
+    -r | --recursive)
+      recursive=true
+      shift
+      ;;
+    -p | --period)
+      preserve_periods=true
+      shift
+      ;;
+    -o | --overwrite)
+      overwrite=true
+      shift
+      ;;
+    -*)
+      echo "Usage: snake [-r|--recursive] [-p|--period] [-o|--overwrite] <path>" >&2
+      return 1
+      ;;
+    *)
+      target="$1"
+      shift
+      ;;
     esac
   done
 
