@@ -371,18 +371,6 @@ snake() {
   fi
 
   #############################################################################
-  # No-op check
-  #
-  # If the transformed name already matches the original, there is nothing to
-  # rename and recursion can stop for this path.
-  #############################################################################
-  local original_name
-  original_name="$(basename "$target")"
-  if [ "$new_name" = "$original_name" ]; then
-    return 0
-  fi
-
-  #############################################################################
   # Collision handling
   #
   # Default: ask generate_unique_name for a free name with an _N suffix.

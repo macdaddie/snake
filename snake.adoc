@@ -134,7 +134,7 @@ Without `-r`, only immediate entries are processed. With `-r`, subdirectories ar
 
 === Recursive Behavior
 
-With `-r`, the function renames a directory and then processes its contents. Without `-r`, a named directory is renamed but its contents are left untouched.
+With `-r`, the function renames a directory if needed and then processes its contents, even when the directory name is already in snake_case. Without `-r`, a named directory is renamed but its contents are left untouched.
 
 Active flags are propagated into recursive calls, so `-r -p -o` applies at every level.
 
