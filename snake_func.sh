@@ -18,11 +18,8 @@
 #   source /path/to/snake_func.sh
 ###############################################################################
 
-###############################################################################
-# Help text
-#
-# Printed by `snake -h` and `snake --help`.
-###############################################################################
+# Help text - Printed by `snake -h` and `snake --help`.
+
 _SNAKE_HELP="Usage: snake [OPTIONS] [path]
 
 Convert filenames and directory names to snake_case format.
@@ -67,9 +64,11 @@ periods in names.
 "
 
 ###############################################################################
-# snake_transform
+# snake_transform - this is the guts of the conversion algorithm.
 #
 # Convert an arbitrary string to snake_case.
+#
+# Add more conversions as discreet parameter conversions, here.
 #
 # Parameters:
 #   $1: input string
@@ -86,12 +85,12 @@ snake_transform() {
   local bracket_marker=$'\002'
 
   # Convert to lowercase
-  result="$(echo "$input" | tr '[:upper:]' '[:lower:]')"
+  result="$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]')"
 
   # Replace spaces with underscores first so word boundaries are preserved.
   result="${result// /_}"
 
-  # Handle periods according to the caller's preference. When periods are
+  # Handle periods according to the user's preference. When periods are
   # preserved they are hidden behind a marker that cannot occur in a filename,
   # so later separator collapsing does not turn them into underscores.
   if [ "$replace_periods" = "1" ]; then
@@ -107,6 +106,12 @@ snake_transform() {
   result="${result//\\/_}"
   result="${result//|/_}"
   result="${result//·/_}"
+  result="${result//@/_}"
+
+  # Removes hidden, white space characters
+  result="${result//$'\n'/_}" # Newlines
+  result="${result//$'\r'/_}" # Carriage returns
+  result="${result//$'\t'/_}" # Tabs
 
   # Brackets are word separators. Replace them with a temporary marker first
   # so brackets next to preserved periods can be handled cleanly.
